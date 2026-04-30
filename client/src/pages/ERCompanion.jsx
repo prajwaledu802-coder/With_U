@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -228,6 +229,7 @@ export default function ERCompanion() {
   const [voices, setVoices] = useState([]);
   const [selectedVoiceURI, setSelectedVoiceURI] = useState(() => localStorage.getItem('with_u_voice') || '');
   const [voiceDropdownOpen, setVoiceDropdownOpen] = useState(false);
+  const [voiceDropdownPos, setVoiceDropdownPos] = useState({ top: 0, left: 0 });
   const [testingVoice, setTestingVoice] = useState(false);
 
   useEffect(() => {
@@ -306,7 +308,10 @@ export default function ERCompanion() {
   // Close dropdown on outside click
   useEffect(() => {
     const handler = (e) => {
-      if (voiceDropdownRef.current && !voiceDropdownRef.current.contains(e.target)) setVoiceDropdownOpen(false);
+      // For voice dropdown: check if click is inside the button container OR the portal dropdown
+      const inVoiceBtn = voiceDropdownRef.current && voiceDropdownRef.current.contains(e.target);
+      const inVoicePortal = e.target.closest('[data-voice-dropdown-portal]');
+      if (!inVoiceBtn && !inVoicePortal) setVoiceDropdownOpen(false);
       if (companionLangRef.current && !companionLangRef.current.contains(e.target)) setCompanionLangOpen(false);
     };
     document.addEventListener('mousedown', handler);
@@ -736,7 +741,7 @@ export default function ERCompanion() {
               {/* ═══ VOICE SELECTOR — Professional Dropdown ═══ */}
               <div className="relative" ref={voiceDropdownRef}>
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
                     if (window.speechSynthesis) {
                       window.speechSynthesis.cancel();
                       const u = new SpeechSynthesisUtterance('');
@@ -747,6 +752,9 @@ export default function ERCompanion() {
                     setTimeout(() => loadVoices(), 100);
                     setTimeout(() => loadVoices(), 500);
                     setTimeout(() => loadVoices(), 1500);
+                    // Calculate fixed position from button
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setVoiceDropdownPos({ top: rect.bottom + 6, left: Math.max(8, rect.right - 320) });
                     setVoiceDropdownOpen(v => !v);
                   }}
                   className={`p-1.5 rounded-lg transition-colors flex items-center gap-1 text-[10px] font-medium ${voiceDropdownOpen ? 'bg-violet-500/15 text-violet-400' : 'hover:bg-white/5 text-white/50'}`}
@@ -761,15 +769,18 @@ export default function ERCompanion() {
                   <ChevronDown size={9} className={`transition-transform ${voiceDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
 
-                <AnimatePresence>
-                  {voiceDropdownOpen && (
-                    <motion.div
-                      key="voice-dropdown"
-                      initial={{ opacity: 0, y: -8, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -8, scale: 0.95 }}
-                      transition={{ duration: 0.15 }}
-                      className="absolute top-full mt-1.5 right-0 w-80 max-h-[420px] flex flex-col rounded-2xl bg-white/95 dark:bg-slate-900/95 border border-slate-200/60 dark:border-white/10 backdrop-blur-xl shadow-2xl z-50"
+                {/* Portal dropdown to body to avoid overflow:hidden clipping */}
+                {voiceDropdownOpen && ReactDOM.createPortal(
+                  <motion.div
+                    key="voice-dropdown"
+                    initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                    ref={voiceDropdownRef}
+                    style={{ position: 'fixed', top: voiceDropdownPos.top, left: voiceDropdownPos.left, zIndex: 9999 }}
+                    data-voice-dropdown-portal="true"
+                    className="w-80 max-h-[420px] flex flex-col rounded-2xl bg-white/95 dark:bg-slate-900/95 border border-slate-200/60 dark:border-white/10 backdrop-blur-xl shadow-2xl"
                     >
                       {/* Header */}
                       <div className="px-4 py-3 border-b border-slate-200/50 dark:border-white/[0.06] flex-shrink-0">
@@ -919,9 +930,9 @@ export default function ERCompanion() {
                           </div>
                         </div>
                       )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                    </motion.div>,
+                  document.body
+                )}
               </div>
               <button onClick={() => setMuted(!muted)}
                 className="p-1.5 rounded-lg hover:bg-white/5 transition-colors"
