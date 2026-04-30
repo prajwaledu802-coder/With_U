@@ -35,9 +35,25 @@ const app = express();
 
 /* ── Middleware ── */
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+const allowedOrigins = (process.env.CLIENT_URL || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL?.split(',') || '*',
+    origin: function (origin, callback) {
+      // Allow requests with no origin (mobile apps, Postman, server-to-server)
+      if (!origin) return callback(null, true);
+      // Check exact match
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      // Allow any Vercel preview/deploy URL for this project
+      if (origin.includes('vercel.app')) return callback(null, true);
+      // Allow localhost for development
+      if (origin.includes('localhost') || origin.includes('127.0.0.1')) return callback(null, true);
+      // Block everything else
+      callback(null, false);
+    },
     credentials: true,
   })
 );
