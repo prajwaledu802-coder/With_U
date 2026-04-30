@@ -679,6 +679,44 @@ export default function ERCompanion() {
 
   const lateNights = trackingEnabled ? getLateNightCount(7) : 0;
 
+  // ═══ VOICE DROPDOWN DATA ═══
+  const voiceLangCodes = LANG_MAP[companionLang] || [companionLang];
+  const matchingVoices = voices.filter(v =>
+    voiceLangCodes.some(lc => v.lang === lc || v.lang.startsWith(lc.split('-')[0]))
+  );
+  const otherVoices = voices.filter(v =>
+    !voiceLangCodes.some(lc => v.lang === lc || v.lang.startsWith(lc.split('-')[0]))
+  );
+  const currentLangLabel = (COMPANION_LANGS.find(l => l.code === companionLang) || {}).label || companionLang;
+
+  const previewVoice = (voiceURI, e) => {
+    e.stopPropagation();
+    if (testingVoice) return;
+    setTestingVoice(true);
+    window.speechSynthesis.cancel();
+    const voice = voices.find(v => v.voiceURI === voiceURI);
+    if (!voice) { setTestingVoice(false); return; }
+    const langCode = voice.lang?.split('-')[0] || 'en';
+    const texts = {
+      en: 'Hello! I am your WITH-U companion. I am here for you.',
+      hi: 'नमस्ते! मैं आपकी WITH-U साथी हूँ। मैं आपके लिए यहाँ हूँ।',
+      kn: 'ನಮಸ್ಕಾರ! ನಾನು ನಿಮ್ಮ WITH-U ಸಂಗಾತಿ. ನಾನು ನಿಮಗಾಗಿ ಇಲ್ಲಿದ್ದೇನೆ.',
+      ta: 'வணக்கம்! நான் உங்கள் WITH-U தோழன். நான் உங்களுக்காக இங்கே இருக்கிறேன்.',
+      te: 'నమస్కారం! నేను మీ WITH-U సహచరుడిని. నేను మీ కోసం ఇక్కడ ఉన్నాను.',
+      ml: 'നമസ്കാരം! ഞാൻ നിങ്ങളുടെ WITH-U കൂട്ടാളി. ഞാൻ നിങ്ങൾക്കായി ഇവിടെയുണ്ട്.',
+      bn: 'নমস্কার! আমি আপনার WITH-U সঙ্গী। আমি আপনার জন্য এখানে আছি।',
+      mr: 'नमस्कार! मी तुमचा WITH-U सोबती. मी तुमच्यासाठी इथे आहे.',
+      gu: 'નમસ્તે! હું તમારો WITH-U સાથી. હું તમારા માટે અહીં છું.',
+      pa: 'ਸਤ ਸ੍ਰੀ ਅਕਾਲ! ਮੈਂ ਤੁਹਾਡਾ WITH-U ਸਾਥੀ ਹਾਂ। ਮੈਂ ਤੁਹਾਡੇ ਲਈ ਇੱਥੇ ਹਾਂ।',
+      ur: 'السلام علیکم! میں آپ کا WITH-U ساتھی ہوں۔ میں آپ کے لیے یہاں ہوں۔',
+    };
+    const u = new SpeechSynthesisUtterance(texts[langCode] || texts.en);
+    u.voice = voice; u.rate = 0.9; u.pitch = 0.95;
+    u.onend = () => setTestingVoice(false);
+    u.onerror = () => setTestingVoice(false);
+    window.speechSynthesis.speak(u);
+  };
+
   return (
     <div className="companion-page" style={{ height: '100%' }}>
       <div className="companion-ambient" />
@@ -724,171 +762,165 @@ export default function ERCompanion() {
                 </button>
 
                 <AnimatePresence>
-                  {voiceDropdownOpen && (() => {
-                    // Group voices: matching language first, then others
-                    const langCodes = LANG_MAP[companionLang] || [companionLang];
-                    const matchingVoices = voices.filter(v =>
-                      langCodes.some(lc => v.lang === lc || v.lang.startsWith(lc.split('-')[0]))
-                    );
-                    const otherVoices = voices.filter(v =>
-                      !langCodes.some(lc => v.lang === lc || v.lang.startsWith(lc.split('-')[0]))
-                    );
-                    const currentLangLabel = (COMPANION_LANGS.find(l => l.code === companionLang) || {}).label || companionLang;
-
-                    const previewVoice = (voiceURI, e) => {
-                      e.stopPropagation();
-                      if (testingVoice) return;
-                      setTestingVoice(true);
-                      window.speechSynthesis.cancel();
-                      const voice = voices.find(v => v.voiceURI === voiceURI);
-                      if (!voice) { setTestingVoice(false); return; }
-                      const langCode = voice.lang?.split('-')[0] || 'en';
-                      const texts = { en:'Hello! I am your WITH-U companion.', hi:'नमस्ते! मैं आपकी WITH-U साथी हूँ।', kn:'ನಮಸ್ಕಾರ! ನಾನು ನಿಮ್ಮ WITH-U ಸಂಗಾತಿ.', ta:'வணக்கம்! நான் உங்கள் WITH-U தோழன்.', te:'నమస్కారం! నేను మీ WITH-U సహచరుడిని.', ml:'നമസ്കാരം! ഞാൻ നിങ്ങളുടെ WITH-U കൂട്ടാളി.', bn:'নমস্কার! আমি আপনার WITH-U সঙ্গী।', mr:'नमस्कार! मी तुमचा WITH-U सोबती.', gu:'નમસ્તે! હું તમારો WITH-U સાથી.', pa:'ਸਤ ਸ੍ਰੀ ਅਕਾਲ! ਮੈਂ ਤੁਹਾਡਾ WITH-U ਸਾਥੀ.', ur:'السلام علیکم! میں آپ کا WITH-U ساتھی۔' };
-                      const u = new SpeechSynthesisUtterance(texts[langCode] || texts.en);
-                      u.voice = voice; u.rate = 0.9; u.pitch = 0.95;
-                      u.onend = () => setTestingVoice(false);
-                      u.onerror = () => setTestingVoice(false);
-                      window.speechSynthesis.speak(u);
-                    };
-
-                    const VoiceRow = ({ v }) => {
-                      const isSelected = selectedVoiceURI === v.voiceURI;
-                      return (
-                        <div
-                          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-all cursor-pointer group ${
-                            isSelected
-                              ? 'bg-violet-500/15 border border-violet-400/30 text-slate-800 dark:text-white'
-                              : 'hover:bg-slate-100 dark:hover:bg-white/[0.06] text-slate-600 dark:text-white/60 border border-transparent'
-                          }`}
-                          onClick={() => handleVoiceSelect(v.voiceURI)}
-                        >
-                          {/* Selected indicator */}
-                          <div className={`w-2 h-2 rounded-full shrink-0 transition-all ${
-                            isSelected ? 'bg-violet-400 scale-110' : 'bg-slate-200 dark:bg-white/10 group-hover:bg-violet-300/50'
-                          }`} />
-
-                          {/* Voice info */}
-                          <div className="flex-1 min-w-0">
-                            <div className="truncate font-medium text-[11px]">{v.name}</div>
-                            <div className="text-[9px] text-slate-400 dark:text-white/25">{getLangLabel(v.lang)} · {v.lang}</div>
-                          </div>
-
-                          {/* Play preview button */}
+                  {voiceDropdownOpen && (
+                    <motion.div
+                      key="voice-dropdown"
+                      initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute top-full mt-1.5 right-0 w-80 max-h-[420px] flex flex-col rounded-2xl bg-white/95 dark:bg-slate-900/95 border border-slate-200/60 dark:border-white/10 backdrop-blur-xl shadow-2xl z-50"
+                    >
+                      {/* Header */}
+                      <div className="px-4 py-3 border-b border-slate-200/50 dark:border-white/[0.06] flex-shrink-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-semibold text-slate-700 dark:text-white/80">🔊 Voice Selection</span>
                           <button
-                            onClick={(e) => previewVoice(v.voiceURI, e)}
-                            disabled={testingVoice}
-                            className={`p-1.5 rounded-lg transition-all shrink-0 ${
-                              isSelected
-                                ? 'bg-violet-500/20 text-violet-400 hover:bg-violet-500/30'
-                                : 'bg-transparent text-slate-300 dark:text-white/20 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-violet-400'
-                            } disabled:opacity-20`}
-                            title="Preview this voice"
-                          >
-                            <Play size={10} />
-                          </button>
+                            onClick={() => loadVoices()}
+                            className="text-[9px] text-slate-400 dark:text-white/30 hover:text-violet-500 transition-colors"
+                          >↻ Refresh</button>
                         </div>
-                      );
-                    };
+                        <div className="text-[10px] text-slate-400 dark:text-white/30">
+                          {voices.length} voices · Select &amp; preview any voice
+                        </div>
+                      </div>
 
-                    return (
-                      <motion.div
-                        initial={{ opacity: 0, y: -8, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: -8, scale: 0.95 }}
-                        transition={{ duration: 0.15 }}
-                        className="absolute top-full mt-1.5 right-0 w-80 max-h-[420px] flex flex-col rounded-2xl bg-white/95 dark:bg-slate-900/95 border border-slate-200/60 dark:border-white/10 backdrop-blur-xl shadow-2xl z-50"
-                      >
-                        {/* Header */}
-                        <div className="px-4 py-3 border-b border-slate-200/50 dark:border-white/[0.06] flex-shrink-0">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-semibold text-slate-700 dark:text-white/80">🔊 Voice Selection</span>
+                      {/* Voice List */}
+                      <div className="flex-1 overflow-y-auto p-1.5" style={{ minHeight: 0 }}>
+
+                        {/* Empty state */}
+                        {voices.length === 0 && (
+                          <div className="px-4 py-8 text-center">
+                            <div className="text-2xl mb-2">🔇</div>
+                            <div className="text-[11px] text-slate-400 dark:text-white/30 mb-3">No voices loaded yet</div>
                             <button
-                              onClick={() => loadVoices()}
-                              className="text-[9px] text-slate-400 dark:text-white/30 hover:text-violet-500 transition-colors"
-                            >↻ Refresh</button>
+                              onClick={() => {
+                                if (window.speechSynthesis) {
+                                  window.speechSynthesis.cancel();
+                                  const u = new SpeechSynthesisUtterance('');
+                                  u.volume = 0;
+                                  window.speechSynthesis.speak(u);
+                                  window.speechSynthesis.cancel();
+                                }
+                                setTimeout(() => loadVoices(), 200);
+                                setTimeout(() => loadVoices(), 1000);
+                                setTimeout(() => loadVoices(), 3000);
+                              }}
+                              className="px-4 py-2 rounded-xl bg-violet-500/15 border border-violet-400/20 text-[11px] text-violet-600 dark:text-violet-200 hover:bg-violet-500/25 transition-all font-medium"
+                            >↻ Load Voices</button>
                           </div>
-                          <div className="text-[10px] text-slate-400 dark:text-white/30">
-                            {voices.length} voices available · Select and preview
-                          </div>
-                        </div>
+                        )}
 
-                        {/* Voice List — Scrollable */}
-                        <div className="flex-1 overflow-y-auto p-1.5" style={{ minHeight: 0 }}>
-
-                          {/* Empty state */}
-                          {voices.length === 0 && (
-                            <div className="px-4 py-8 text-center">
-                              <div className="text-2xl mb-2">🔇</div>
-                              <div className="text-[11px] text-slate-400 dark:text-white/30 mb-3">No voices loaded yet</div>
-                              <button
-                                onClick={() => {
-                                  if (window.speechSynthesis) {
-                                    window.speechSynthesis.cancel();
-                                    const u = new SpeechSynthesisUtterance('');
-                                    u.volume = 0;
-                                    window.speechSynthesis.speak(u);
-                                    window.speechSynthesis.cancel();
-                                  }
-                                  setTimeout(() => loadVoices(), 200);
-                                  setTimeout(() => loadVoices(), 1000);
-                                  setTimeout(() => loadVoices(), 3000);
-                                }}
-                                className="px-4 py-2 rounded-xl bg-violet-500/15 border border-violet-400/20 text-[11px] text-violet-600 dark:text-violet-200 hover:bg-violet-500/25 transition-all font-medium"
-                              >↻ Load Voices</button>
+                        {/* Matching language voices */}
+                        {matchingVoices.length > 0 && (
+                          <div className="mb-2">
+                            <div className="px-3 py-1.5 text-[9px] uppercase tracking-wider text-violet-500 dark:text-violet-400 font-bold flex items-center gap-1.5">
+                              <span className="w-1 h-1 rounded-full bg-violet-400" />
+                              {currentLangLabel} Voices ({matchingVoices.length})
                             </div>
-                          )}
-
-                          {/* Matching language voices */}
-                          {matchingVoices.length > 0 && (
-                            <div className="mb-2">
-                              <div className="px-3 py-1.5 text-[9px] uppercase tracking-wider text-violet-500 dark:text-violet-400 font-bold flex items-center gap-1.5">
-                                <span className="w-1 h-1 rounded-full bg-violet-400" />
-                                {currentLangLabel} Voices ({matchingVoices.length})
-                              </div>
-                              <div className="space-y-0.5">
-                                {matchingVoices.map(v => <VoiceRow key={v.voiceURI} v={v} />)}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Other voices */}
-                          {otherVoices.length > 0 && (
-                            <div>
-                              <div className="px-3 py-1.5 text-[9px] uppercase tracking-wider text-slate-400 dark:text-white/25 font-bold flex items-center gap-1.5">
-                                <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-white/20" />
-                                Other Voices ({otherVoices.length})
-                              </div>
-                              <div className="space-y-0.5">
-                                {otherVoices.map(v => <VoiceRow key={v.voiceURI} v={v} />)}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Footer — Current selection */}
-                        {selectedVoiceURI && (
-                          <div className="px-4 py-2.5 border-t border-slate-200/50 dark:border-white/[0.06] flex-shrink-0 bg-violet-500/[0.03]">
-                            <div className="flex items-center justify-between">
-                              <div className="min-w-0">
-                                <div className="text-[9px] text-slate-400 dark:text-white/25 uppercase tracking-wide">Active Voice</div>
-                                <div className="text-[11px] font-medium text-slate-700 dark:text-white/70 truncate">
-                                  {voices.find(v => v.voiceURI === selectedVoiceURI)?.name || 'None'}
+                            <div className="space-y-0.5">
+                              {matchingVoices.map(v => (
+                                <div
+                                  key={v.voiceURI}
+                                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-all cursor-pointer group ${
+                                    selectedVoiceURI === v.voiceURI
+                                      ? 'bg-violet-500/15 border border-violet-400/30 text-slate-800 dark:text-white'
+                                      : 'hover:bg-slate-100 dark:hover:bg-white/[0.06] text-slate-600 dark:text-white/60 border border-transparent'
+                                  }`}
+                                  onClick={() => handleVoiceSelect(v.voiceURI)}
+                                >
+                                  <div className={`w-2 h-2 rounded-full shrink-0 transition-all ${
+                                    selectedVoiceURI === v.voiceURI ? 'bg-violet-400 scale-110' : 'bg-slate-200 dark:bg-white/10 group-hover:bg-violet-300/50'
+                                  }`} />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="truncate font-medium text-[11px]">{v.name}</div>
+                                    <div className="text-[9px] text-slate-400 dark:text-white/25">{getLangLabel(v.lang)} · {v.lang}</div>
+                                  </div>
+                                  <button
+                                    onClick={(e) => previewVoice(v.voiceURI, e)}
+                                    disabled={testingVoice}
+                                    className={`p-1.5 rounded-lg transition-all shrink-0 ${
+                                      selectedVoiceURI === v.voiceURI
+                                        ? 'bg-violet-500/20 text-violet-400 hover:bg-violet-500/30'
+                                        : 'bg-transparent text-slate-300 dark:text-white/20 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-violet-400'
+                                    } disabled:opacity-20`}
+                                    title="Preview this voice"
+                                  >
+                                    <Play size={10} />
+                                  </button>
                                 </div>
-                              </div>
-                              <button
-                                onClick={testVoice}
-                                disabled={testingVoice}
-                                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-violet-500 text-white text-[10px] font-medium hover:bg-violet-600 disabled:opacity-40 transition-all shadow-sm"
-                              >
-                                <Play size={10} />
-                                {testingVoice ? 'Playing…' : 'Test Selected'}
-                              </button>
+                              ))}
                             </div>
                           </div>
                         )}
-                      </motion.div>
-                    );
-                  })()}
+
+                        {/* Other voices */}
+                        {otherVoices.length > 0 && (
+                          <div>
+                            <div className="px-3 py-1.5 text-[9px] uppercase tracking-wider text-slate-400 dark:text-white/25 font-bold flex items-center gap-1.5">
+                              <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-white/20" />
+                              Other Voices ({otherVoices.length})
+                            </div>
+                            <div className="space-y-0.5">
+                              {otherVoices.map(v => (
+                                <div
+                                  key={v.voiceURI}
+                                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-all cursor-pointer group ${
+                                    selectedVoiceURI === v.voiceURI
+                                      ? 'bg-violet-500/15 border border-violet-400/30 text-slate-800 dark:text-white'
+                                      : 'hover:bg-slate-100 dark:hover:bg-white/[0.06] text-slate-600 dark:text-white/60 border border-transparent'
+                                  }`}
+                                  onClick={() => handleVoiceSelect(v.voiceURI)}
+                                >
+                                  <div className={`w-2 h-2 rounded-full shrink-0 transition-all ${
+                                    selectedVoiceURI === v.voiceURI ? 'bg-violet-400 scale-110' : 'bg-slate-200 dark:bg-white/10 group-hover:bg-violet-300/50'
+                                  }`} />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="truncate font-medium text-[11px]">{v.name}</div>
+                                    <div className="text-[9px] text-slate-400 dark:text-white/25">{getLangLabel(v.lang)} · {v.lang}</div>
+                                  </div>
+                                  <button
+                                    onClick={(e) => previewVoice(v.voiceURI, e)}
+                                    disabled={testingVoice}
+                                    className={`p-1.5 rounded-lg transition-all shrink-0 ${
+                                      selectedVoiceURI === v.voiceURI
+                                        ? 'bg-violet-500/20 text-violet-400 hover:bg-violet-500/30'
+                                        : 'bg-transparent text-slate-300 dark:text-white/20 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-violet-400'
+                                    } disabled:opacity-20`}
+                                    title="Preview this voice"
+                                  >
+                                    <Play size={10} />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Footer — Active voice */}
+                      {selectedVoiceURI && (
+                        <div className="px-4 py-2.5 border-t border-slate-200/50 dark:border-white/[0.06] flex-shrink-0 bg-violet-500/[0.03]">
+                          <div className="flex items-center justify-between">
+                            <div className="min-w-0">
+                              <div className="text-[9px] text-slate-400 dark:text-white/25 uppercase tracking-wide">Active Voice</div>
+                              <div className="text-[11px] font-medium text-slate-700 dark:text-white/70 truncate">
+                                {voices.find(v => v.voiceURI === selectedVoiceURI)?.name || 'None'}
+                              </div>
+                            </div>
+                            <button
+                              onClick={testVoice}
+                              disabled={testingVoice}
+                              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-violet-500 text-white text-[10px] font-medium hover:bg-violet-600 disabled:opacity-40 transition-all shadow-sm"
+                            >
+                              <Play size={10} />
+                              {testingVoice ? 'Playing…' : 'Test Selected'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
                 </AnimatePresence>
               </div>
               <button onClick={() => setMuted(!muted)}
