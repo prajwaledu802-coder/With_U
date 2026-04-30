@@ -238,6 +238,30 @@ export default function ERCompanion() {
     lastMessageStressRef.current = lastMessageStress;
   }, [lastMessageStress]);
 
+  // Language code mapping for Indian languages (browser voices use full locale codes)
+  const LANG_MAP = {
+    en: ['en-US', 'en-GB', 'en-IN', 'en-AU', 'en'],
+    hi: ['hi-IN', 'hi'],
+    kn: ['kn-IN', 'kn'],
+    ta: ['ta-IN', 'ta'],
+    te: ['te-IN', 'te'],
+    ml: ['ml-IN', 'ml'],
+    bn: ['bn-IN', 'bn'],
+    mr: ['mr-IN', 'mr'],
+    gu: ['gu-IN', 'gu'],
+    pa: ['pa-IN', 'pa'],
+    ur: ['ur-PK', 'ur-IN', 'ur'],
+  };
+
+  const findVoiceForLang = (allVoices, langCode) => {
+    const codes = LANG_MAP[langCode] || [langCode];
+    for (const code of codes) {
+      const match = allVoices.find(v => v.lang === code || v.lang.startsWith(code.split('-')[0]));
+      if (match) return match;
+    }
+    return null;
+  };
+
   // Load browser voices — with retry polling for Chrome/Edge
   const loadVoices = () => {
     const all = window.speechSynthesis?.getVoices() || [];
@@ -245,7 +269,7 @@ export default function ERCompanion() {
       setVoices(all);
       if (!selectedVoiceURI) {
         const langCode = companionLang || 'en';
-        const match = all.find(v => v.lang.startsWith(langCode)) || all[0];
+        const match = findVoiceForLang(all, langCode) || all[0];
         if (match) { setSelectedVoiceURI(match.voiceURI); localStorage.setItem('with_u_voice', match.voiceURI); }
       }
     }
@@ -260,7 +284,7 @@ export default function ERCompanion() {
     const poll = setInterval(() => {
       if (loadVoices() > 0 || retries++ > 50) clearInterval(poll);
     }, 300);
-    // Second wave: try again after 2s if still empty
+    // Second wave: try again after delays
     setTimeout(() => loadVoices(), 2000);
     setTimeout(() => loadVoices(), 5000);
     return () => {
@@ -268,6 +292,16 @@ export default function ERCompanion() {
       window.speechSynthesis?.removeEventListener('voiceschanged', loadVoices);
     };
   }, []);
+
+  // When companion language changes, auto-select a matching voice
+  useEffect(() => {
+    if (voices.length === 0) return;
+    const match = findVoiceForLang(voices, companionLang);
+    if (match) {
+      setSelectedVoiceURI(match.voiceURI);
+      localStorage.setItem('with_u_voice', match.voiceURI);
+    }
+  }, [companionLang, voices]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -581,12 +615,11 @@ export default function ERCompanion() {
     }
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    // Try selected voice, or pick first available
+    // Try selected voice, or pick one matching the companion language
     let voice = getSelectedVoice();
     if (!voice) {
       const allVoices = window.speechSynthesis.getVoices();
-      const langCode = companionLang || 'en';
-      voice = allVoices.find(v => v.lang.startsWith(langCode)) || allVoices[0] || null;
+      voice = findVoiceForLang(allVoices, companionLang) || allVoices[0] || null;
       if (voice && !selectedVoiceURI) {
         setSelectedVoiceURI(voice.voiceURI);
         localStorage.setItem('with_u_voice', voice.voiceURI);
@@ -595,7 +628,9 @@ export default function ERCompanion() {
     if (voice) u.voice = voice;
     u.rate = 0.9;
     u.pitch = 0.95;
-    u.lang = companionLang || 'en';
+    // Set lang to match the voice or companion language
+    const langCodes = LANG_MAP[companionLang] || [companionLang];
+    u.lang = voice?.lang || langCodes[0] || 'en';
     u.onend = () => { setSpeaking(false); setAnim(nextAnim); setTimeout(() => setAnim('idle'), 2000); };
     u.onerror = () => { setSpeaking(false); setAnim('idle'); };
     window.speechSynthesis.speak(u);
