@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Heart,
@@ -19,6 +19,7 @@ import Footer from '../components/Footer';
 import GlassCard from '../components/GlassCard';
 import FeatureCard from '../components/FeatureCard';
 import AnimatedBackground from '../components/AnimatedBackground';
+import { useAuth } from '../contexts/AuthContext';
 
 const stagger = {
   hidden: { opacity: 0 },
@@ -31,6 +32,12 @@ const fadeUp = {
 
 export default function Landing() {
   const { t } = useTranslation();
+  const { session, loading } = useAuth();
+
+  // If user is already signed in, go straight to dashboard
+  if (!loading && session) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return (
     <div className="min-h-screen flex flex-col relative">

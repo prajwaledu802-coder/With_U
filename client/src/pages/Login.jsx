@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -8,6 +8,7 @@ import Navbar from '../components/Navbar';
 import GlassCard from '../components/GlassCard';
 import AnimatedBackground from '../components/AnimatedBackground';
 import { signIn, signInWithGoogle } from '../services/authService';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Login() {
   const { t } = useTranslation();
@@ -15,6 +16,12 @@ export default function Login() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [busy, setBusy] = useState(false);
   const [showPw, setShowPw] = useState(false);
+  const { session, loading: authLoading } = useAuth();
+
+  // If already signed in, go to dashboard
+  if (!authLoading && session) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const submit = async (e) => {
     e.preventDefault();

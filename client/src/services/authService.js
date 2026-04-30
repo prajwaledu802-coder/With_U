@@ -18,11 +18,10 @@ export const signIn = async ({ email, password }) => {
 };
 
 export const signInWithGoogle = async () => {
-  const redirectUrl = `${window.location.origin}/auth/callback`;
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: { 
-      redirectTo: redirectUrl,
+      redirectTo: window.location.origin,
     },
   });
   if (error) throw error;
