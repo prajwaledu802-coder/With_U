@@ -698,7 +698,20 @@ export default function ERCompanion() {
               {/* Voice Selector in Header */}
               <div className="relative" ref={voiceDropdownRef}>
                 <button
-                  onClick={() => { loadVoices(); setVoiceDropdownOpen(v => !v); }}
+                  onClick={() => {
+                    // Force unlock speechSynthesis (some browsers need user gesture)
+                    if (window.speechSynthesis) {
+                      window.speechSynthesis.cancel();
+                      const unlock = new SpeechSynthesisUtterance('');
+                      unlock.volume = 0;
+                      window.speechSynthesis.speak(unlock);
+                      window.speechSynthesis.cancel();
+                    }
+                    setTimeout(() => loadVoices(), 100);
+                    setTimeout(() => loadVoices(), 500);
+                    setTimeout(() => loadVoices(), 1500);
+                    setVoiceDropdownOpen(v => !v);
+                  }}
                   className={`p-1.5 rounded-lg transition-colors flex items-center gap-1 text-[10px] font-medium ${voiceDropdownOpen ? 'bg-violet-500/15 text-violet-400' : 'hover:bg-white/5 text-white/50'}`}
                   title="Choose voice"
                 >
@@ -715,19 +728,45 @@ export default function ERCompanion() {
                       className="absolute top-full mt-1 right-0 w-72 max-h-64 overflow-y-auto rounded-2xl bg-white/95 dark:bg-slate-900/95 border border-slate-200/50 dark:border-white/10 backdrop-blur-xl shadow-2xl z-50"
                     >
                       <div className="sticky top-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl px-3 py-2 border-b border-slate-200/50 dark:border-white/10 flex items-center justify-between">
-                        <span className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-white/40 font-semibold">Choose Voice</span>
-                        <button
-                          onClick={testVoice}
-                          disabled={testingVoice || !selectedVoiceURI}
-                          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-violet-500/15 border border-violet-400/20 text-[10px] text-violet-600 dark:text-violet-200 hover:bg-violet-500/25 disabled:opacity-30 transition-all"
-                        >
-                          <Play size={10} />
-                          {testingVoice ? 'Playing...' : 'Test Voice'}
-                        </button>
+                        <span className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-white/40 font-semibold">Choose Voice ({voices.length})</span>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => { loadVoices(); }}
+                            className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 dark:bg-white/5 text-[10px] text-slate-500 dark:text-white/40 hover:bg-slate-200 dark:hover:bg-white/10 transition-all"
+                          >
+                            ↻ Refresh
+                          </button>
+                          <button
+                            onClick={testVoice}
+                            disabled={testingVoice || !selectedVoiceURI}
+                            className="flex items-center gap-1 px-2 py-1 rounded-lg bg-violet-500/15 border border-violet-400/20 text-[10px] text-violet-600 dark:text-violet-200 hover:bg-violet-500/25 disabled:opacity-30 transition-all"
+                          >
+                            <Play size={10} />
+                            {testingVoice ? 'Playing...' : 'Test'}
+                          </button>
+                        </div>
                       </div>
                       <div className="p-1">
                         {voices.length === 0 && (
-                          <div className="px-3 py-4 text-center text-[11px] text-slate-400 dark:text-white/30">No voices available</div>
+                          <div className="px-3 py-4 text-center">
+                            <div className="text-[11px] text-slate-400 dark:text-white/30 mb-2">No voices loaded yet</div>
+                            <button
+                              onClick={() => {
+                                if (window.speechSynthesis) {
+                                  window.speechSynthesis.cancel();
+                                  const u = new SpeechSynthesisUtterance('');
+                                  u.volume = 0;
+                                  window.speechSynthesis.speak(u);
+                                  window.speechSynthesis.cancel();
+                                }
+                                setTimeout(() => loadVoices(), 200);
+                                setTimeout(() => loadVoices(), 1000);
+                              }}
+                              className="px-3 py-1.5 rounded-lg bg-violet-500/15 border border-violet-400/20 text-[10px] text-violet-600 dark:text-violet-200 hover:bg-violet-500/25 transition-all"
+                            >
+                              ↻ Load Voices
+                            </button>
+                          </div>
                         )}
                         {voices.map((v) => (
                           <button
