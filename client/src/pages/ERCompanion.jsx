@@ -255,11 +255,14 @@ export default function ERCompanion() {
   useEffect(() => {
     loadVoices();
     window.speechSynthesis?.addEventListener('voiceschanged', loadVoices);
-    // Retry polling: Chrome sometimes delays voice list population
+    // Aggressive polling: Chrome/Edge delay voice list, especially on HTTPS
     let retries = 0;
     const poll = setInterval(() => {
-      if (loadVoices() > 0 || retries++ > 15) clearInterval(poll);
-    }, 200);
+      if (loadVoices() > 0 || retries++ > 50) clearInterval(poll);
+    }, 300);
+    // Second wave: try again after 2s if still empty
+    setTimeout(() => loadVoices(), 2000);
+    setTimeout(() => loadVoices(), 5000);
     return () => {
       clearInterval(poll);
       window.speechSynthesis?.removeEventListener('voiceschanged', loadVoices);
@@ -570,6 +573,34 @@ export default function ERCompanion() {
   };
 
   /* ── Text-to-Speech ── */
+  const browserSpeak = (text, nextAnim = 'idle') => {
+    if (!window.speechSynthesis) {
+      setSpeaking(false);
+      setAnim('idle');
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    // Try selected voice, or pick first available
+    let voice = getSelectedVoice();
+    if (!voice) {
+      const allVoices = window.speechSynthesis.getVoices();
+      const langCode = companionLang || 'en';
+      voice = allVoices.find(v => v.lang.startsWith(langCode)) || allVoices[0] || null;
+      if (voice && !selectedVoiceURI) {
+        setSelectedVoiceURI(voice.voiceURI);
+        localStorage.setItem('with_u_voice', voice.voiceURI);
+      }
+    }
+    if (voice) u.voice = voice;
+    u.rate = 0.9;
+    u.pitch = 0.95;
+    u.lang = companionLang || 'en';
+    u.onend = () => { setSpeaking(false); setAnim(nextAnim); setTimeout(() => setAnim('idle'), 2000); };
+    u.onerror = () => { setSpeaking(false); setAnim('idle'); };
+    window.speechSynthesis.speak(u);
+  };
+
   const speakText = async (text, nextAnim = 'idle') => {
     if (!voiceEnabled) return;
     setSpeaking(true);
@@ -579,19 +610,13 @@ export default function ERCompanion() {
       if (result?.audio && !result.mock) {
         const a = result.audio;
         a.onended = () => { setSpeaking(false); setAnim(nextAnim); setTimeout(() => setAnim('idle'), 2000); };
+        a.onerror = () => browserSpeak(text, nextAnim);
       } else {
-        window.speechSynthesis.cancel();
-        const u = new SpeechSynthesisUtterance(text);
-        const voice = getSelectedVoice();
-        if (voice) u.voice = voice;
-        u.rate = 0.9;
-        u.pitch = 0.95;
-        u.onend = () => { setSpeaking(false); setAnim(nextAnim); setTimeout(() => setAnim('idle'), 2000); };
-        window.speechSynthesis.speak(u);
+        browserSpeak(text, nextAnim);
       }
     } catch {
-      setSpeaking(false);
-      setAnim('idle');
+      // ElevenLabs failed — use browser speech
+      browserSpeak(text, nextAnim);
     }
   };
 
