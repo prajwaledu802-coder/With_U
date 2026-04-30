@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import Landing from './pages/Landing';
@@ -15,6 +15,7 @@ import CallAira from './pages/CallAira';
 import NotFound from './pages/NotFound';
 import ProtectedRoute from './components/ProtectedRoute';
 import DashboardLayout from './components/DashboardLayout';
+import LogoIntro from './components/LogoIntro';
 
 const pageVariants = {
   initial: { opacity: 0 },
@@ -24,6 +25,9 @@ const pageVariants = {
 
 export default function App() {
   const location = useLocation();
+  const [introComplete, setIntroComplete] = useState(
+    () => !!sessionStorage.getItem('withu_intro_seen')
+  );
 
   useEffect(() => {
     const handleMouseMove = (e) => {
@@ -48,7 +52,13 @@ export default function App() {
   }, []);
 
   return (
-    <AnimatePresence mode="wait">
+    <>
+      {/* Logo Intro Splash Screen */}
+      {!introComplete && (
+        <LogoIntro onComplete={() => setIntroComplete(true)} />
+      )}
+
+      <AnimatePresence mode="wait">
       <motion.div
         key={location.pathname}
         variants={pageVariants}
@@ -56,6 +66,7 @@ export default function App() {
         animate="in"
         exit="out"
         transition={{ duration: 0.25, ease: 'easeInOut' }}
+        style={!introComplete ? { visibility: 'hidden' } : undefined}
       >
         <Routes location={location}>
           {/* Public */}
@@ -91,5 +102,6 @@ export default function App() {
         </Routes>
       </motion.div>
     </AnimatePresence>
+    </>
   );
 }
