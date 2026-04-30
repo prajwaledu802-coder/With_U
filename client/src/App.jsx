@@ -13,6 +13,7 @@ import GentleSearch from './pages/Emergency';
 import Settings from './pages/Settings';
 import CallAira from './pages/CallAira';
 import NotFound from './pages/NotFound';
+import AuthCallback from './pages/AuthCallback';
 import ProtectedRoute from './components/ProtectedRoute';
 import DashboardLayout from './components/DashboardLayout';
 import LogoIntro from './components/LogoIntro';
@@ -73,6 +74,7 @@ export default function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
 
           {/* Protected Central Hub & Features */}
           <Route
