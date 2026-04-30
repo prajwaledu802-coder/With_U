@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 export default function LogoIntro({ onComplete }) {
   const [show, setShow] = useState(true);
+  const [videoReady, setVideoReady] = useState(false);
   const videoRef = useRef(null);
 
   useEffect(() => {
@@ -13,10 +14,10 @@ export default function LogoIntro({ onComplete }) {
       return;
     }
 
-    // Fallback: auto-dismiss after 8 seconds if video doesn't load
+    // Fallback: auto-dismiss after 7 seconds if video doesn't play
     const fallback = setTimeout(() => {
       handleDone();
-    }, 8000);
+    }, 7000);
 
     return () => clearTimeout(fallback);
   }, []);
@@ -28,13 +29,16 @@ export default function LogoIntro({ onComplete }) {
   };
 
   const handleVideoEnd = () => {
-    // Small delay after video ends for smooth transition
-    setTimeout(handleDone, 400);
+    setTimeout(handleDone, 300);
   };
 
   const handleVideoError = () => {
-    // If video fails to load, skip intro
     handleDone();
+  };
+
+  const handleCanPlay = () => {
+    setVideoReady(true);
+    videoRef.current?.play().catch(() => {});
   };
 
   if (!show) return null;
@@ -46,47 +50,76 @@ export default function LogoIntro({ onComplete }) {
           key="logo-intro"
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-          className="fixed inset-0 z-[9999] flex items-center justify-center"
-          style={{ background: '#0a0812' }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
           onClick={handleDone}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: '#000000',
+            cursor: 'pointer',
+          }}
         >
-          {/* Gradient glow behind video */}
-          <div
-            className="absolute inset-0 pointer-events-none"
+          <video
+            ref={videoRef}
+            src="/logo-intro.mp4"
+            autoPlay
+            muted
+            playsInline
+            onCanPlay={handleCanPlay}
+            onEnded={handleVideoEnd}
+            onError={handleVideoError}
             style={{
-              background: 'radial-gradient(circle at center, rgba(139,92,246,0.15) 0%, transparent 60%)',
+              width: '100vw',
+              height: '100vh',
+              objectFit: 'contain',
+              background: '#000000',
+              display: videoReady ? 'block' : 'none',
             }}
           />
 
-          <motion.div
-            initial={{ scale: 0.85, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            className="relative w-full max-w-lg"
-          >
-            <video
-              ref={videoRef}
-              src="/logo-intro.mp4"
-              autoPlay
-              muted
-              playsInline
-              onEnded={handleVideoEnd}
-              onError={handleVideoError}
-              className="w-full h-auto rounded-2xl"
-              style={{ maxHeight: '70vh' }}
-            />
-          </motion.div>
+          {/* Loading pulse while video loads */}
+          {!videoReady && (
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '16px',
+            }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #8b5cf6, #a855f7)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                animation: 'pulse 1.5s ease-in-out infinite',
+              }}>
+                <span style={{ color: 'white', fontWeight: 'bold', fontSize: '20px' }}>W</span>
+              </div>
+              <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '12px', letterSpacing: '0.2em' }}>
+                WITH_U
+              </span>
+            </div>
+          )}
 
           {/* Skip hint */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.4 }}
-            transition={{ delay: 2 }}
-            className="absolute bottom-8 text-white/40 text-xs tracking-widest uppercase cursor-pointer hover:text-white/70 transition-colors"
-          >
+          <div style={{
+            position: 'absolute',
+            bottom: '24px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            color: 'rgba(255,255,255,0.25)',
+            fontSize: '11px',
+            letterSpacing: '0.15em',
+            textTransform: 'uppercase',
+          }}>
             tap to skip
-          </motion.div>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>

@@ -4,11 +4,25 @@ import { syncWithBackend, getMe } from '../services/authService';
 
 const AuthContext = createContext(null);
 
+// Check if current URL looks like an OAuth callback
+const isOAuthCallback = () => {
+  const hash = window.location.hash;
+  const params = new URLSearchParams(window.location.search);
+  return (
+    hash.includes('access_token') ||
+    hash.includes('error') ||
+    params.has('code') ||
+    params.has('error')
+  );
+};
+
 export const AuthProvider = ({ children }) => {
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
+  // Stay loading longer if we're coming back from OAuth
   const [loading, setLoading] = useState(true);
   const syncingRef = useRef(false);
+  const resolvedRef = useRef(false);
 
   const refresh = async () => {
     try {
@@ -30,29 +44,53 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const finishLoading = () => {
+    if (!resolvedRef.current) {
+      resolvedRef.current = true;
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
+    const oauthInProgress = isOAuthCallback();
 
-    // Safety: force loading=false after 5s to prevent infinite spinner
+    // Safety: force loading=false after timeout
+    // Give OAuth callbacks more time (8s) vs normal loads (5s)
     const timeout = setTimeout(() => {
-      if (mounted && loading) setLoading(false);
-    }, 5000);
+      if (mounted) finishLoading();
+    }, oauthInProgress ? 8000 : 5000);
 
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!mounted) return;
-      setSession(data.session);
-      if (data.session) await doSync();
-      setLoading(false);
-    }).catch(() => {
-      if (mounted) setLoading(false);
-    });
+    // For OAuth callbacks, DON'T call getSession immediately
+    // Wait for onAuthStateChange to fire with the processed session
+    if (!oauthInProgress) {
+      supabase.auth.getSession().then(async ({ data }) => {
+        if (!mounted) return;
+        setSession(data.session);
+        if (data.session) await doSync();
+        finishLoading();
+      }).catch(() => {
+        if (mounted) finishLoading();
+      });
+    }
 
     const { data: sub } = supabase.auth.onAuthStateChange(async (_event, sess) => {
+      if (!mounted) return;
+      console.log('[WITH_U] Auth event:', _event, !!sess);
       setSession(sess);
       if (sess) {
         await doSync();
+        finishLoading();
+        // If this was an OAuth callback, redirect to dashboard
+        if (oauthInProgress && window.location.pathname !== '/dashboard') {
+          window.location.replace('/dashboard');
+        }
       } else {
         setUser(null);
+        // Only finish loading on SIGNED_OUT if not waiting for OAuth
+        if (!oauthInProgress || _event === 'SIGNED_OUT') {
+          finishLoading();
+        }
       }
     });
 
