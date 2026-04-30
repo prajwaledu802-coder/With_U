@@ -1,0 +1,35 @@
+{
+  "name": "with-u-client",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 5173"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "axios": "^1.7.7",
+    "face-api.js": "^0.22.2",
+    "fflate": "^0.8.2",
+    "framer-motion": "^11.5.4",
+    "i18next": "^23.15.1",
+    "lucide-react": "^0.445.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-hot-toast": "^2.4.1",
+    "react-i18next": "^15.0.2",
+    "react-router-dom": "^6.26.2",
+    "recharts": "^2.12.7",
+    "retell-client-js-sdk": "^2.0.7",
+    "three": "^0.160.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.13",
+    "vite": "^5.4.7"
+  }
+}
